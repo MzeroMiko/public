@@ -244,6 +244,61 @@
         </div>
     </section>
 
+      <section class="section">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-12">
+            <h2 class="title is-3">Highlights</h2>
+          </div>
+        </div>
+        <div class="columns is-centered">
+          <div class="column is-12">
+            <div class="content has-text-justified">
+              <p>
+                <b>XDLM</b> demonstrates strong potential in practical applications. By fine-tuning LLaDA, it achieved a high score of 15.0 on the MBPP code generation benchmark in just 32 generation steps. This represents nearly a twofold performance increase compared to the baseline. As shown in the figure on the right, this significant boost is primarily attributed to LLaDA-XDLM's ability to drastically reduce generation failures.
+              </p>
+              <div align="center"><img width="80%" src="./static/images/llada-xdlm.png" /></div>
+              <p>
+                The study identifies two dominant paradigms in existing discrete diffusion models, each with distinct performance trade-offs. 
+                <b>MDLM (Masked Diffusion Language Model)</b>: This mask-based paradigm excels in comprehension tasks (such as zero-shot perplexity) and generation with sufficient steps, but suffers a sharp decline in performance during few-step generation.
+                <b>UDLM (Uniform-noise Diffusion Language Model)</b>: In contrast, this uniform-noise-based paradigm significantly outperforms MDLM in few-step generation scenarios but lacks in overall comprehension ability.
+              </p>
+              <p>
+                Based on these observations, we proposed XDLM. By utilizing a unified stationary noise kernel, XDLM integrates the strengths of both paradigms, aiming to achieve both superior model comprehension and efficient few-step generation performance simultaneously. As illustrated below, the core idea of XDLM is the ingenious combination of the noise kernels from UDLM (<b>u</b>) and MDLM (<b>m</b>), achieving an effective trade-off between the two.  The left side of the figure demonstrates the noise kernel mixing mechanism, where <b>[NORMAL]</b> denotes standard tokens and <b>[MASK]</b> represents masked tokens. The right side intuitively reveals the balance between comprehension (zero-shot perplexity) and generation efficiency (perplexity under 32-step sampling). Experiments show that XDLM reaches its optimal balance point at a mixing ratio of 0.1.
+              </p>
+              <div align="center"><img width="80%" src="./static/images/xdlm.png" /></div>
+              <p>
+                To establish the theoretical foundation for the practical application of this unified noise kernel, we further derives its corresponding posterior probability (for model inference) and KL divergence (for model training), while also providing its limiting form.
+              </p>
+              <div align="center"><img width="100%" src="./static/images/lemma_posterior.png" /></div>
+              <div align="center"><img width="100%" src="./static/images/lemma_kl.png" /></div>
+              <div align="center"><img width="100%" src="./static/images/lemma_kl_limit.png" /></div>
+              <p>
+                This critical simplification significantly conserves computational resources, enabling XDLM to achieve an exceptional balance between throughput and GPU memory usage. As shown in the table below, this advantage is particularly prominent during the sampling (inference) stage: XDLM's throughput is more than 2.4x that of UDLM, while its memory footprint is substantially reduced, demonstrating superior engineering efficiency.
+              </p>
+              <div align="center"><img width="80%" src="./static/images/throughput.png" /></div>
+              <p>
+                Benefiting from this mixed noise mechanism, XDLM demonstrates robust error-correction and refinement capabilities across both text and image tasks. The figure below illustrates a segment of the sequence generation process at step <b>T = 8/32</b>, vividly depicting its three inherent transition dynamics. <b>Green</b>: Generating new content from [MASK] tokens (Content Creation). <b>Blue</b>: Refining existing tokens (Quality Enhancement). <b>Red</b>: "Re-masking" inappropriate tokens for regeneration in subsequent steps (Error Correction).
+              </p>
+              <div align="center"><img width="80%" src="./static/images/case_lm1b.png" /></div>
+              <p>
+                This robust corrective capability extends seamlessly to image generation tasks, where the model iteratively optimizes and rectifies.
+              </p>
+              <div align="center"><img width="80%" src="./static/images/case_imnet1k.png" /></div>
+              <p>
+                Furthermore, we also conduct a comprehensive evaluation of XDLM, spanning text generation on the OWT and LM1B datasets, image generation on ImageNet-1K and CIFAR-10 (including scenarios with Classifier-Free Guidance), and common zero-shot generalization benchmarks. The figure below illustrates the text generation performance as a function of sampling steps on the LM1B and OWT datasets.
+              </p>
+              <div align="center"><img width="80%" src="./static/images/performance_text_gen.png" /></div>
+              <p>
+                A significant finding is that XDLM and UDLM, both of which incorporate uniform noise components, exhibit continuous improvements in generation performance as training scale increases, ultimately surpassing the mask-only MDLM. This phenomenon has been consistently validated across both text and image generation tasks, providing robust support for the future scalability of diffusion models that leverage uniform noise.
+              </p>
+              <div align="center"><img width="80%" src="./static/images/performance_crosspoint.png" /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <div class="container is-max-desktop">
         <div class="columns is-centered has-text-centered">
