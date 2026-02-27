@@ -4,7 +4,6 @@ const main_page = document.querySelector(".mainPage");
 init_headline();
 init_searchline();
 init_apps();
-init_login();
 
 function init_headline() {
     const main_headline = main_page.querySelector(".headline");
@@ -12,8 +11,9 @@ function init_headline() {
     
     }
     
-    main_headline.querySelector(".head_menu .login").onclick = () => {
-    
+    main_headline.querySelector(".head_menu .login").onclick = function () {
+        if (!logged_in) login_app.open();
+        else login_app.logout();
     }
 }
 
@@ -97,10 +97,6 @@ function init_apps() {
             icon: '<svg viewBox="-10 -10 70 70" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#262f73" stroke-width="2"><g><circle cx="13.8096" cy="29.9036" r="9.3075"></circle><circle cx="26.4413" cy="17.3207" r="8.5318"></circle><path d="M21.14,35.6386,32.3015,23.5225c3.2871-3.5684,12.4462-1.4954,12.4462,5.8623,0,9.8263-8.6916,13.0451-15.0182,4.7468"></path><path d="M25.132,13.3652c-2.0545,1.2363-3.8009,2.7125-2.62,6.6747"></path><circle cx="13.8096" cy="29.9036" r="9.3075"></circle><circle cx="26.4413" cy="17.3207" r="8.5318"></circle><path d="M21.14,35.6386,32.3015,23.5225c3.2871-3.5684,12.4462-1.4954,12.4462,5.8623,0,9.8263-8.6916,13.0451-15.0182,4.7468"></path><path d="M25.132,13.3652c-2.0545,1.2363-3.8009,2.7125-2.62,6.6747"></path></g></svg>',
             link: "https://localhost:7001",
         },
-        AboutMe: {
-            icon: '<svg viewBox="-50 -50 425 400" xmlns="http://www.w3.org/2000/svg"><g><rect rx="20" height="240" width="80" y="75" x="25" stroke="#e32a77" fill="#e32a77"/><rect rx="20" height="240" width="80" y="75" x="270" stroke="#bc22df" fill="#bc22df"/><rect transform="rotate(-45 130 145)" rx="20" height="240" width="80" y="25" x="90" stroke="#34e3bb" fill="#34e3bb"/><rect transform="rotate(45 243.5 145)" rx="20" height="240" width="87" y="25" x="200" stroke="#fbdb04" fill="#fbdb04"/></g></svg>',
-            link: "https://github.com/MzeroMiko",
-        }
     }];
     
     const apps = ["monitor_app", "explorer_app", "music_app", "video_app", "pdf_reader_app"];
@@ -134,10 +130,6 @@ function init_apps() {
     }
 }
 
-function init_login() {
-
-}
-
 // ==================================================================
 
 function get_html_and_del(selector) {
@@ -160,6 +152,7 @@ const plainview_html = get_html_and_del("htmlstore module.plainview");
 const htmlview_html = get_html_and_del("htmlstore module.htmlview");
 const pdfview_html = get_html_and_del("htmlstore module.pdfview");
 const imageview_html = get_html_and_del("htmlstore module.imageview");
+const loginpage_html = get_html_and_del("htmlstore module.loginpage");
 
 const view_type = {
     "pdf": [".pdf"],
@@ -253,45 +246,115 @@ function next_path(type = ["plain"], tag = "next", path = "") {
     }
 }
 
-{
-    function LoginPage() {
-        let authTimeHandler;
-        function login(login = true, loginCallBack = () => { }, logoutCallBack = () => { }) {
-            let waitAuthTimeout = (waitTime) => {
-                if (!action_core.getAuthStat()) { logoutCallBack(); clearTimeout(authTimeHandler); }
-                authTimeHandler = setTimeout(function () { waitAuthTimeout(waitTime); }, waitTime);
-            }
-    
-            if (login) {
-                popmenu.appendAuth((name, key) => {
-                    if (!(name + key))
-                        return false;
-                    action_core.askAuthCore(name + key,
-                        () => { waitAuthTimeout(2000); loginCallBack(); },
-                        () => { pop_templates("").authFail(); logoutCallBack(); }
-                    );
-                });
-            } else {
-                action_core.closeSessionCore(function () { logoutCallBack(); });
-            }
-        }
-        return {
-            login: login,
+function LoginPage(opts={}) {
+    let args = {
+        box: opts.box,
+        html: opts.html,
+        params: {
+            get_auth_stat: () => {},
+            ask_auth_core: (name_key, pass_callback, fail_callback)=> {},
+            close_session_core: (callback) => {},
+            login_callback: () => {},
+            login_fail_callback: () => {},
+            logout_callback: () => {},
+        },
+        styles: {},
+    }
+    for (let key in opts) if (key in args.styles) args.styles[key] = opts[key];
+    for (let key in opts) if (key in args.params) args.params[key] = opts[key];
+
+    let shadow_module = html_to_shadow(args.html)
+    args.box.appendChild(shadow_module)
+    for (let key in args.styles) shadow_module.style.setProperty('--' + key, args.styles[key]);
+
+    const login_box = shadow_module.shadowRoot.querySelector(".login_box");
+    const login_user = login_box.querySelector(".input .user") 
+    const login_pass = login_box.querySelector(".input .pass") 
+    const login_submit = login_box.querySelector(".login.button") 
+
+    login_submit.onclick = function () {
+        if (login_user.value != "" && login_pass.value != "") {
+            let key = login_user.value + login_pass.value;
+            args.params.ask_auth_core(key,
+                () => { wait_auth_timeout(2000, true); args.params.login_callback(); },
+                () => { args.params.login_fail_callback(); }
+            );
+            clear();
         }
     }
 
-    let logAction = (button) => {
-        button.innerText = "IN";
-        button.onclick = function () {
-            let button = this;
-            LoginPage().login((button.innerText == "IN"), function () {
-                button.innerText = "OUT";
-            }, function () {
-                button.innerText = "IN";
-            });
-        };
+
+    let authTimeHandler;
+    function wait_auth_timeout(waitTime, start=false, end=false) {
+        clearTimeout(authTimeHandler);
+        if (end) return null;
+        if (!start && !args.params.get_auth_stat()) {
+            logout();
+        } else {
+            authTimeHandler = setTimeout(function () { wait_auth_timeout(waitTime); }, waitTime);
+        }
+    }
+
+    function logout() {
+        clear();
+        args.params.close_session_core();
+        args.params.logout_callback();
+        wait_auth_timeout(0, false, true);
+    }
+
+    function clear() {
+        login_user.value = ""
+        login_pass.value = ""
+    }
+
+    return {
+        clear: clear,
+        logout: logout,
     }
 }
+
+let logged_in = false;
+const login_app = function () {
+    let view_box = document.createElement('div');
+    let login_page = LoginPage({
+        box: view_box, 
+        html: loginpage_html,
+        get_auth_stat: action_core.getAuthStat,
+        ask_auth_core: action_core.askAuthCore,
+        close_session_core: action_core.closeSessionCore,
+        login_callback: () => {
+            popmenu.appendMessage("pass", "logged in");
+            login_page.clear();
+            view_handler.iview.hide("hide");
+            logged_in = true;
+            document.querySelector(".headline .login").style.color = "#ed6666";
+
+        },
+        login_fail_callback: () => {
+            popmenu.appendMessage("fail", "auth failed");
+            login_page.clear();
+            logged_in = false;
+            document.querySelector(".headline .login").style.color = "#888";
+        },
+        logout_callback: () => {
+            popmenu.appendMessage("info", "logged out");
+            logged_in = false;
+            document.querySelector(".headline .login").style.color = "#888";
+        },
+    })
+    let view_handler = imanager.build_view({
+        box: view_box, 
+        width: "42em", height: "32em", title: "", 
+        btnShow: ["exit"],
+        exit: () => {login_page.clear(); view_handler.iview.hide("hide"); },
+    });
+
+   return {
+        open: () => { imanager.open_exist_view(view_handler.iview); },
+        logout: () => { login_page.logout(); }
+   } 
+}()
+
 
 // monitor ================================================
 const monitor_app = function () {
@@ -326,9 +389,6 @@ const monitor_app = function () {
         open: open_monitor,
     }
 }()
-
-// document.querySelector(".mainline .flows .card.monitor").onclick = monitor_app.open_monitor
-
 
 // files ==================================================
 
@@ -427,6 +487,9 @@ const explorer_app = function () {
             remove: (path, callback) => {
                 action_core.removeCore(path, pop_templates("remove " + path, callback));
             },
+            upload: (file, path, callback) => {
+                action_core.uploadFile(file, path, callback);
+            }
     });
     let file_handler = imanager.build_view({
         box: file_box,
@@ -452,6 +515,7 @@ const explorer_app = function () {
         update_info: file_view.updateInfo,
     }
 }()
+
 
 const music_app = function () {
     let music_box = document.createElement('div');

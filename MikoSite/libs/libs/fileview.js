@@ -78,6 +78,32 @@ function SimpPageActions(simple_page, operations, popmenu=null) {
         }
     }
 
+    function basename(str="") {
+        let idx = str.lastIndexOf('/');
+        if (idx < 0) {
+          return str
+        }
+        return str.substring(idx + 1);
+    }
+
+    function dirname(str="") {
+        let idx = str.lastIndexOf('/');
+        if (idx < 0) {
+          return str
+        }
+        return str.substring(0, idx);
+    }
+
+    function path_join(path1="", path2="") {
+        if (path1.endsWith("/")) {
+            path1 = path1.substring(0, path1.length);
+        }
+        if (path2.startsWith("/")) {
+            path2 = path2.substring(1);
+        }
+        return path1 + "/" + path2;
+    }
+
     function do_mkdir(cpath) {
         function init() {
             simple_page_do.innerText = "New Directory";
@@ -161,7 +187,7 @@ function SimpPageActions(simple_page, operations, popmenu=null) {
             simple_page.style.display = "";
             simple_page_content.style.display = "";
             update_info_callback = ()=>{
-                simple_page_dst_input.value = simple_page.__this_info__.Path;
+                simple_page_dst_input.value = path_join(simple_page.__this_info__.Path, basename(path));
             };
             operations.openfolder(cpath, (info)=>{ 
                 simple_page_update_info(info); 
@@ -193,7 +219,7 @@ function SimpPageActions(simple_page, operations, popmenu=null) {
             simple_page.style.display = "";
             simple_page_content.style.display = "";
             update_info_callback = ()=>{
-                simple_page_dst_input.value = simple_page.__this_info__.Path;
+                simple_page_dst_input.value = path_join(simple_page.__this_info__.Path, basename(path));
             };
             operations.openfolder(cpath, (info)=>{ 
                 simple_page_update_info(info); 
@@ -542,7 +568,7 @@ function FileViewer(opts = {}) {
         choose_icon: choose_icon,
         get_item_html: (item, path) => {return get_item_html(item, path);},
         get_open_folder_info: (info) => {return get_open_folder_info(info); },
-        refresh: () => {open_path(current_info.Path, True)},
+        refresh: () => {open_path(current_info.Path, true)},
         openfile: args.params.openfile,
         openfolder: args.params.openfolder,
         download: args.params.download,
